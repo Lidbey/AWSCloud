@@ -16,7 +16,7 @@ s3 = boto3.resource(
 
 x_wing_bucket = s3.Bucket(name='developer-task')
 
-files = [str(bucket.key) for bucket in x_wing_bucket.objects.filter(Prefix='x-wing')]
+files = [str(file.key) for file in x_wing_bucket.objects.filter(Prefix='x-wing')]
 
 
 def listFiles(bucket, body):
@@ -27,7 +27,6 @@ def listFiles(bucket, body):
         print('No regex provided')
         return
     regex = body[1:]
-    print(regex)
     r = re.compile(regex)
     print(list(filter(r.match, files)))
 
@@ -70,7 +69,24 @@ def deleteFile(bucket, body):
     if body == '':
         print('No regex provided')
         return
-    regex = body.split('\'')[1::2]
+    if len(body) < 2:
+        print('No regex provided')
+        return
+    regex = body[1:]
+    r = re.compile(regex)
+    l = list(filter(r.match, files))
+    l_dict = [{'Key': name} for name in l]
+    try:
+        bucket.delete_objects(
+            Delete={
+                'Objects': l_dict
+            }
+        )
+        print(f'Deleted files: {l}')
+        for item in l:
+            files.remove(item)
+    except Exception as e:
+        print(f'Failed to delete files {e}')
 
 
 print(f"""
